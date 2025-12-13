@@ -64,7 +64,7 @@ class MainWindow(QMainWindow):
             vote_file.write("Phone: " + voter_phone + "\n")
             vote_file.write("Candidate: " + picked_candidate + "\n")
             vote_file.write("Date: " + vote_date + "\n")
-            vote_file.write("----------------------------------------\n")
+            vote_file.write("Next Vote\n")
             vote_file.close()
         except:
             self.error_box("Could not write to voteresults.txt")
@@ -93,7 +93,7 @@ class MainWindow(QMainWindow):
         updated_lines = []
         skip_flag = False
         for line in all_lines:
-            if line.startswith("----- Vote Summary -----"):
+            if line.startswith("Vote Summary"):
                 skip_flag = True
                 continue
             if skip_flag:
@@ -106,7 +106,7 @@ class MainWindow(QMainWindow):
             for line in updated_lines:
                 write_file.write(line)
 
-            write_file.write("\n----- Vote Summary -----\n")
+            write_file.write("\nVote Summary\n")
             for cand, num in vote_counts.items():
                 write_file.write(cand + ": " + str(num) + "\n")
 
