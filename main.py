@@ -8,108 +8,123 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        # ---- TF2 figure prices ----
-        self.red_prices = {
-            "Scout": 285,
-            "Soldier": 150,
-            "Pyro": 250,
-            "Demoman": 220,
-            "Heavy": 150,
-            "Engineer": 170,
-            "Medic": 300,
-            "Sniper": 230,
-            "Spy": 135
-        }
+        # buttons
+        self.ui.OK.accepted.connect(self.save_vote)
+        self.ui.OK.rejected.connect(self.close)
 
-        self.blu_prices = {
-            "Scout": 230,
-            "Soldier": 110,
-            "Pyro": 200,
-            "Demoman": 180,
-            "Heavy": 130,
-            "Engineer": 150,
-            "Medic": 240,
-            "Sniper": 200,
-            "Spy": 120
-        }
+        # checkboxes
+        self.ui.cb_Repub.stateChanged.connect(self.limit_checkboxes)
+        self.ui.cb_Demo.stateChanged.connect(self.limit_checkboxes)
+        self.ui.cb_thrdprty.stateChanged.connect(self.limit_checkboxes)
 
-        # connect signals
-        self.ui.combo_class.currentIndexChanged.connect(self.update_price)
-        self.ui.radio_red.clicked.connect(self.update_price)
-        self.ui.radio_blu.clicked.connect(self.update_price)
-        self.ui.radio_new.clicked.connect(self.update_price)
-        self.ui.radio_used.clicked.connect(self.update_price)
-        self.ui.input_budget.textChanged.connect(self.update_price)
+    # makes only one political choice at a time
+    def limit_checkboxes(self):
+        all_cbs = [self.ui.cb_Repub, self.ui.cb_Demo, self.ui.cb_thrdprty]
+        chosen = self.sender()
+        for cb in all_cbs:
+            if cb != chosen:
+                cb.setChecked(False)
 
-        # set RED & NEW defaults
-        self.ui.radio_red.setChecked(True)
-        self.ui.radio_new.setChecked(True)
+    # saves vote and updates summary
+    def save_vote(self):
+        voter_name = self.ui.name.text().strip()
+        voter_phone = self.ui.phone.text().strip()
+        vote_date = self.ui.dayvoted.dateTime().toString()
 
-        # apply styling
-        self.apply_style()
+        # find candidate choice
+        if self.ui.cb_Repub.isChecked():
+            picked_candidate = "Republican"
 
-        # initialize price
-        self.update_price()
+        elif self.ui.cb_Demo.isChecked():
+            picked_candidate = "Democrat"
 
-    def apply_style(self):
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f2f2f2;
-            }
-
-            QLabel {
-                font-size: 14px;
-            }
-
-            QLineEdit, QComboBox {
-                background: white;
-                border: 1px solid #c4c4c4;
-                border-radius: 6px;
-                padding: 4px;
-                font-size: 14px;
-            }
-
-            QPushButton {
-                background-color: #d64646;
-                color: white;
-                border-radius: 6px;
-                padding: 6px 10px;
-                font-size: 14px;
-            }
-
-            QPushButton:hover {
-                background-color: #bb3a3a;
-            }
-        """)
-
-    def update_price(self):
-        class_name = self.ui.combo_class.currentText()
-
-        # choose team
-        use_red = self.ui.radio_red.isChecked()
-        price = self.red_prices[class_name] if use_red else self.blu_prices[class_name]
-
-        # used discount
-        if self.ui.radio_used.isChecked():
-            price = price / 2
-
-        # show price in price box
-        self.ui.input_price.setText(f"${price:.2f}")
-
-        # check budget
-        try:
-            budget = float(self.ui.input_budget.text())
-        except:
-            self.ui.label_result.setText("Enter a valid budget.")
+        elif self.ui.cb_thrdprty.isChecked():
+            third_name = self.ui.customcan.text().strip()
+            if third_name == "":
+                self.error_box("Please enter the 3rd Party candidate name.")
+                return
+            picked_candidate = "3rd Party - " + third_name
+        else:
+            self.error_box("Pick someone before submitting.")
             return
 
-        if budget >= price:
-            self.ui.label_result.setText("YES, you can afford it!")
-        else:
-            self.ui.label_result.setText("NO, it's not in your budget.")
+        # basic validation
+        if voter_name == "":
+            self.error_box("Name missing")
+            return
+
+        if voter_phone == "":
+            self.error_box("Phone number missing")
+            return
+
+        # write the vote to the file
+        try:
+            vote_file = open("voteresults.txt", "a")
+            vote_file.write("Name: " + voter_name + "\n")
+            vote_file.write("Phone: " + voter_phone + "\n")
+            vote_file.write("Candidate: " + picked_candidate + "\n")
+            vote_file.write("Date: " + vote_date + "\n")
+            vote_file.write("----------------------------------------\n")
+            vote_file.close()
+        except:
+            self.error_box("Could not write to voteresults.txt")
+            return
+
+        # read file again to count votes
+        try:
+            read_file = open("voteresults.txt", "r")
+            all_lines = read_file.readlines()
+            read_file.close()
+        except:
+            self.error_box("Couldn't read voteresults.txt")
+            return
+
+        # count the votes
+        vote_counts = {}
+        for line in all_lines:
+            if line.startswith("Candidate:"):
+                found_cand = line.replace("Candidate:", "").strip()
+                if found_cand in vote_counts:
+                    vote_counts[found_cand] += 1
+                else:
+                    vote_counts[found_cand] = 1
+
+        # remove old summary
+        updated_lines = []
+        skip_flag = False
+        for line in all_lines:
+            if line.startswith("----- Vote Summary -----"):
+                skip_flag = True
+                continue
+            if skip_flag:
+                continue
+            updated_lines.append(line)
+
+        # rewrite file with updated summary
+        try:
+            write_file = open("voteresults.txt", "w")
+            for line in updated_lines:
+                write_file.write(line)
+
+            write_file.write("\n----- Vote Summary -----\n")
+            for cand, num in vote_counts.items():
+                write_file.write(cand + ": " + str(num) + "\n")
+
+            write_file.close()
+
+        except:
+            self.error_box("Failed to update summary.")
+            return
+
+        QMessageBox.information(self, "Vote Saved", "Your vote was saved!")
+
+    def error_box(self, msg):
+        QMessageBox.critical(self, "Error", msg)
+
 
 if __name__ == "__main__":
-    app = QApplication([])
-    window = MainWindow()
-    window.show()
-    app.exec()
+    import sys
+    app = QApplication(sys.argv)
+    win = MainWindow()
+    win.show()
+    sys.exit(app.exec())

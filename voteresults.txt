@@ -1,16 +1,8 @@
-Name: Gloria
-Phone: Hothmire
+Name: Trevor Merkley
+Phone: 4026666666
 Candidate: Republican
-Date Voted: Mon Apr 7 00:00:00 2014
+Date: Sat Apr 1 00:00:00 2000
 ----------------------------------------
 
 ----- Vote Summary -----
-Republican: 1
-Name: Franklin
-Phone: 35843759835
-Canidate: 3rd Party - Joe Dohn
-Date Submitted: Sun Aug 7 05:00:00 2011
------------------
-
-Vote Summary
 Republican: 1
